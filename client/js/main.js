@@ -64,6 +64,9 @@ Promise.resolve()
             controllers.push(
                 require("./controllers/post_upload_controller.js")
             );
+            controllers.push(
+                require("./controllers/reverse_search_controller")
+            );
             controllers.push(require("./controllers/tag_controller.js"));
             controllers.push(require("./controllers/tag_list_controller.js"));
             controllers.push(

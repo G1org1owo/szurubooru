@@ -38,6 +38,10 @@ class TopNavigationController {
         if (!api.hasPrivilege("posts:list")) {
             topNavigation.hide("posts");
         }
+        if(!api.hasPrivilege("posts:reverseSearch")){
+            topNavigation.hide("upload");
+            topNavigation.hide("reverse_search");
+        }
         if (!api.hasPrivilege("posts:create")) {
             topNavigation.hide("upload");
         }
