@@ -215,9 +215,11 @@ class ReverseSearchView extends events.EventTarget {
                 return uri.formatClientLink("posts", parameters);
             },
             requestPage: (offset, limit) => {
+                let pagedResults = searchResult.similarPosts.slice(offset, limit);
                 return Promise.resolve(
-                    Object.assign({}, searchResult, {
-                        results: PostList.fromResponse(searchResult.similarPosts.slice(offset, limit).map(result => result.post))
+                    Object.assign({}, {
+                        results: PostList.fromResponse(pagedResults.map(result => result.post)),
+                        total:searchResult.similarPosts.length
                     }
                 ));
             },
