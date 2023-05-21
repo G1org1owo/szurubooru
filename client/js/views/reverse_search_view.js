@@ -182,7 +182,6 @@ class ReverseSearchView extends events.EventTarget {
 
         if(this._ctx.parameters.id){
             Post.get(this._ctx.parameters.id).then(post => {
-                console.log(post.fullContentUrl);
                 this.addUploadables(new Url(post.fullContentUrl));
             });
         }
