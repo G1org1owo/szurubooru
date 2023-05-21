@@ -59,4 +59,8 @@ module.exports = (router) => {
     router.enter(["reverse-search"], (ctx, next) => {
         ctx.controller = new ReverseSearchController(ctx);
     });
+
+    router.enter(["reverse-search", ":id"], (ctx, next) => {
+       ctx.controller = new ReverseSearchController(ctx)
+    });
 };

@@ -7,6 +7,7 @@ const FileDropperControl = require("../controls/file_dropper_control.js");
 const settings = require("../models/settings");
 const uri = require("../util/uri");
 const PageController = require("../controllers/page_controller.js");
+const Post = require("../models/post");
 const PostList = require("../models/post_list");
 const PostsPageView = require("./posts_page_view");
 
@@ -178,6 +179,13 @@ class ReverseSearchView extends events.EventTarget {
         );
 
         this._formNode.classList.add("inactive");
+
+        if(this._ctx.parameters.id){
+            Post.get(this._ctx.parameters.id).then(post => {
+                console.log(post.fullContentUrl);
+                this.addUploadables(new Url(post.fullContentUrl));
+            });
+        }
     }
 
     enableForm() {
@@ -273,71 +281,6 @@ class ReverseSearchView extends events.EventTarget {
         this.addUploadables(e.detail.urls.map((url) => new Url(url))[0]);
     }
 
-    /*_updateUploadableFromDom(uploadable) {
-        const rowNode = uploadable.rowNode;
-
-        const safetyNode = rowNode.querySelector(".safety input:checked");
-        if (safetyNode) {
-            uploadable.safety = safetyNode.value;
-        }
-
-        const anonymousNode = rowNode.querySelector(
-            ".anonymous input:checked"
-        );
-        if (anonymousNode) {
-            uploadable.anonymous = true;
-        }
-
-        uploadable.tags = [];
-        uploadable.relations = [];
-        for (let [i, lookalike] of uploadable.lookalikes.entries()) {
-            let lookalikeNode = rowNode.querySelector(
-                `.lookalikes li:nth-child(${i + 1})`
-            );
-            if (lookalikeNode.querySelector("[name=copy-tags]").checked) {
-                uploadable.tags = uploadable.tags.concat(
-                    lookalike.post.tagNames
-                );
-            }
-            if (lookalikeNode.querySelector("[name=add-relation]").checked) {
-                uploadable.relations.push(lookalike.post.id);
-            }
-        }
-    }*/
-
-    /*_evtRemoveClick(e, uploadable) {
-        e.preventDefault();
-        if (this._uploading) {
-            return;
-        }
-        this.removeUploadable(uploadable);
-    }
-
-    _evtMoveClick(e, uploadable, delta) {
-        e.preventDefault();
-        if (this._uploading) {
-            return;
-        }
-        let index = this._uploadables.find(uploadable);
-        if ((index + delta).between(-1, this._uploadables.length)) {
-            let uploadable1 = this._uploadables[index];
-            let uploadable2 = this._uploadables[index + delta];
-            this._uploadables[index] = uploadable2;
-            this._uploadables[index + delta] = uploadable1;
-            if (delta === 1) {
-                this._listNode.insertBefore(
-                    uploadable2.rowNode,
-                    uploadable1.rowNode
-                );
-            } else {
-                this._listNode.insertBefore(
-                    uploadable1.rowNode,
-                    uploadable2.rowNode
-                );
-            }
-        }
-    }*/
-
     _emit(eventType) {
         this.dispatchEvent(
             new CustomEvent(eventType, {
@@ -347,48 +290,6 @@ class ReverseSearchView extends events.EventTarget {
             })
         );
     }
-
-    /*_renderRowNode(uploadable) {
-        const rowNode = rowTemplate(
-            Object.assign({}, this._ctx, { uploadable: uploadable })
-        );
-        if (uploadable.rowNode) {
-            uploadable.rowNode.parentNode.replaceChild(
-                rowNode,
-                uploadable.rowNode
-            );
-        } else {
-            this._listNode.appendChild(rowNode);
-        }
-
-        uploadable.rowNode = rowNode;
-
-        rowNode
-            .querySelector("a.remove")
-            .addEventListener("click", (e) =>
-                this._evtRemoveClick(e, uploadable)
-            );
-        rowNode
-            .querySelector("a.move-up")
-            .addEventListener("click", (e) =>
-                this._evtMoveClick(e, uploadable, -1)
-            );
-        rowNode
-            .querySelector("a.move-down")
-            .addEventListener("click", (e) =>
-                this._evtMoveClick(e, uploadable, 1)
-            );
-    }
-
-    _updateThumbnailNode(uploadable) {
-        const rowNode = rowTemplate(
-            Object.assign({}, this._ctx, { uploadable: uploadable })
-        );
-        views.replaceContent(
-            uploadable.rowNode.querySelector(".thumbnail"),
-            rowNode.querySelector(".thumbnail").childNodes
-        );
-    }*/
 
     get _uploading() {
         return this._formNode.classList.contains("uploading");

@@ -60,6 +60,10 @@
             <a href='https://www.google.com/searchbyimage?&image_url=<%- encodeURIComponent(ctx.post.fullContentUrl) %>'>Google Images</a>
         </section>
 
+        <section class='reverse-search'>
+            <a href='<%- ctx.getPostReverseSearchUrl(ctx.post.id) %>'>Similar Posts</a>
+        </section>
+
         <section class='social'>
             <div class='score-container'></div>
 

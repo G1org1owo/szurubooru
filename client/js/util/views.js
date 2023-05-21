@@ -194,6 +194,13 @@ function getPostEditUrl(id, parameters) {
     );
 }
 
+function getPostReverseSearchUrl(id){
+    return uri.formatClientLink(
+        "reverse-search",
+        id
+    );
+}
+
 function makePostLink(id, includeHash) {
     let text = id;
     if (includeHash) {
@@ -432,6 +439,7 @@ function getTemplate(templatePath) {
         Object.assign(ctx, {
             getPostUrl: getPostUrl,
             getPostEditUrl: getPostEditUrl,
+            getPostReverseSearchUrl: getPostReverseSearchUrl,
             makeRelativeTime: makeRelativeTime,
             makeFileSize: makeFileSize,
             makeMarkdown: makeMarkdown,
