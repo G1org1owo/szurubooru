@@ -180,12 +180,7 @@ class Post extends events.EventTarget {
         return ret;
     }
 
-    static reverseSearch(content) {
-        let apiPromise = api.post(
-            uri.formatApiLink("posts", "reverse-search"),
-            {},
-            { content: content }
-        );
+    static _handleReverseSearchPromise(apiPromise) {
         let returnedPromise = apiPromise.then((response) => {
             if (response.exactPost) {
                 response.exactPost = Post.fromResponse(response.exactPost);
@@ -197,6 +192,24 @@ class Post extends events.EventTarget {
         });
         returnedPromise.abort = () => apiPromise.abort();
         return returnedPromise;
+    }
+
+    static reverseSearch(content) {
+        let apiPromise = api.post(
+            uri.formatApiLink("posts", "reverse-search"),
+            {},
+            { content: content }
+        );
+        return this._handleReverseSearchPromise(apiPromise);
+    }
+
+    static reverseSearchById(id) {
+        let apiPromise = api.post(
+            uri.formatApiLink("post", id, "reverse-search"),
+                {},
+                {}
+        );
+        return this._handleReverseSearchPromise(apiPromise);
     }
 
     static get(id) {

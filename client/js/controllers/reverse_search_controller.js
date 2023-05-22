@@ -33,7 +33,9 @@ class ReverseSearchController {
 
     _reverseSearchPost(uploadable) {
         progress.start();
-        let reverseSearchPromise = Post.reverseSearch(
+        let reverseSearchPromise = this._ctx.parameters.id ?
+            Post.reverseSearchById(this._ctx.parameters.id) :
+            Post.reverseSearch(
             uploadable.url || uploadable.file
         );
 

@@ -181,9 +181,7 @@ class ReverseSearchView extends events.EventTarget {
         this._formNode.classList.add("inactive");
 
         if(this._ctx.parameters.id){
-            Post.get(this._ctx.parameters.id).then(post => {
-                this.addUploadables(new Url(post.fullContentUrl));
-            });
+            this._emit("submit")
         }
     }
 
