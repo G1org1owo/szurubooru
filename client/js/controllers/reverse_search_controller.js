@@ -21,6 +21,8 @@ class ReverseSearchController {
         topNavigation.setTitle("Reverse Search");
         this._view = new ReverseSearchView(this._ctx);
         this._view.addEventListener("submit", (e) => this._evtSubmit(e));
+        if(this._ctx.parameters.id)
+            this._reverseSearchPost(null)
     }
 
     _evtSubmit(e) {

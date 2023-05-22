@@ -179,10 +179,6 @@ class ReverseSearchView extends events.EventTarget {
         );
 
         this._formNode.classList.add("inactive");
-
-        if(this._ctx.parameters.id){
-            this._emit("submit")
-        }
     }
 
     enableForm() {

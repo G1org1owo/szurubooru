@@ -204,7 +204,7 @@ class Post extends events.EventTarget {
     }
 
     static reverseSearchById(id) {
-        let apiPromise = api.post(
+        let apiPromise = api.get(
             uri.formatApiLink("post", id, "reverse-search"),
                 {},
                 {}
