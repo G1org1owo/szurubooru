@@ -12,6 +12,7 @@ from szurubooru.func import (
     snapshots,
     tags,
     versions,
+    files
 )
 
 _search_executor_config = search.configs.PostSearchConfig()
@@ -37,6 +38,28 @@ def _serialize_post(
     return posts.serialize_post(
         post, ctx.user, options=serialization.get_serialization_options(ctx)
     )
+
+
+def _get_posts_by_image(
+        ctx: rest.Context, content: bytes
+) -> rest.Response:
+    try:
+        lookalikes = posts.search_by_image(content)
+    except (errors.ThirdPartyError, errors.ProcessingError):
+        lookalikes = []
+
+    return {
+        "exactPost": _serialize_post(
+            ctx, posts.search_by_image_exact(content)
+        ),
+        "similarPosts": [
+            {
+                "distance": distance,
+                "post": _serialize_post(ctx, post),
+            }
+            for distance, post in lookalikes
+        ],
+    }
 
 
 @rest.routes.get("/posts/?")
@@ -291,20 +314,14 @@ def get_posts_by_image(
     auth.verify_privilege(ctx.user, "posts:reverse_search")
     content = ctx.get_file("content")
 
-    try:
-        lookalikes = posts.search_by_image(content)
-    except (errors.ThirdPartyError, errors.ProcessingError):
-        lookalikes = []
+    return _get_posts_by_image(ctx, content)
 
-    return {
-        "exactPost": _serialize_post(
-            ctx, posts.search_by_image_exact(content)
-        ),
-        "similarPosts": [
-            {
-                "distance": distance,
-                "post": _serialize_post(ctx, post),
-            }
-            for distance, post in lookalikes
-        ],
-    }
+
+@rest.routes.get("/post/(?P<post_id>[^/]+)/reverse-search/?")
+def get_posts_by_id(
+        ctx: rest.Context, params: Dict[str, str]
+) -> rest.Response:
+    auth.verify_privilege(ctx.user, "posts:reverse_search")
+    content = files.get(posts.get_post_content_path(_get_post(params)))
+
+    return _get_posts_by_image(ctx, content)
