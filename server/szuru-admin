@@ -13,7 +13,7 @@ from getpass import getpass
 from sys import stderr
 
 from szurubooru import config, db, errors, model
-from szurubooru.func import files, images
+from szurubooru.func import files, images, mime
 from szurubooru.func import posts as postfuncs
 from szurubooru.func import users as userfuncs
 
@@ -100,6 +100,22 @@ def regenerate_thumbnails() -> None:
             pass
 
 
+def regenerate_mimes() -> None:
+    for post in db.session.query(model.Post).order_by(model.Post.post_id.desc()).all():
+        try:
+            content = files.get(postfuncs.get_post_content_path(post))
+            if post.mime_type != mime.get_mime_type(content):
+                print("Updating content information for post %d ..." % post.post_id)
+                postfuncs.update_post_content(post, content)
+                db.session.commit()
+                print("  New mime: %s" % post.mime_type)
+
+        except KeyboardInterrupt:
+            return
+        except Exception:
+            pass
+
+
 def main() -> None:
     parser_top = ArgumentParser(
         description="Collection of CLI commands for an administrator to use",
@@ -129,6 +145,12 @@ def main() -> None:
         help="regenerate the thumbnails for posts if the "
         "thumbnail files are missing",
     )
+    parser.add_argument(
+        "--regenerate-mimes",
+        action="store_true",
+        help="regenerate the mime types for posts if they "
+        "do not match the actual content"
+    )
     command = parser_top.parse_args()
 
     try:
@@ -140,6 +162,8 @@ def main() -> None:
             reset_filenames()
         elif command.regenerate_thumbnails:
             regenerate_thumbnails()
+        elif command.regenerate_mimes:
+            regenerate_mimes()
     except errors.BaseError as e:
         print(e, file=stderr)
 
