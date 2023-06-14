@@ -402,7 +402,7 @@ class PostSearchConfig(BaseSearchConfig):
                     search_util.create_str_filter(
                         model.Post.mime_type
                     )
-                )
+                ),
             ]
         )
 
