@@ -79,6 +79,10 @@
             <td>given type of posts. <code>&lt;value&gt;</code> can be either <code>image</code>, <code>animation</code> (or <code>animated</code> or <code>anim</code>), <code>flash</code> (or <code>swf</code>) or <code>video</code> (or <code>webm</code>).</td>
         </tr>
         <tr>
+            <td><code>mime-type</code></td>
+            <td>having given mime of posts.</td>
+        </tr>
+        <tr>
             <td><code>flag</code></td>
             <td>having given flag. <code>&lt;value&gt;</code> can be either <code>loop</code> or <code>sound</code>.</td>
         </tr>
@@ -153,6 +157,10 @@
         <tr>
             <td><code>time</code></td>
             <td>alias of <code>creation-date</code></td>
+        </tr>
+        <tr>
+            <td><code>mime</code></td>
+            <td>alias of <code>mime-type</code></td>
         </tr>
         <tr>
             <td><code>last-edit-date</code></td>

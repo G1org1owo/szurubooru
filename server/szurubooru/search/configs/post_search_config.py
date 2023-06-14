@@ -349,6 +349,12 @@ class PostSearchConfig(BaseSearchConfig):
                     ),
                 ),
                 (["pool"], _pool_filter),
+                (
+                    ["mime-type", "mime_type", "mime"],
+                    search_util.create_str_filter(
+                        model.Post.mime_type
+                    )
+                )
             ]
         )
 
