@@ -102,19 +102,26 @@ def regenerate_thumbnails() -> None:
 
 def regenerate_mimes() -> None:
     for post in db.session.query(model.Post).order_by(model.Post.post_id.desc()).all():
-        try:
-            content = files.get(postfuncs.get_post_content_path(post))
-            if post.mime_type != mime.get_mime_type(content):
-                print("Updating content information for post %d ..." % post.post_id)
-                postfuncs.update_post_content(post, content)
-                db.session.commit()
-                print("  New mime: %s" % post.mime_type)
+        _regenerate_mime(post)
 
-        except KeyboardInterrupt:
-            return
-        except Exception:
-            pass
+def _regenerate_mime(post: Post) -> None:
+    try:
+        content = files.get(postfuncs.get_post_content_path(post))
+        if post.mime_type != mime.get_mime_type(content):
+            print("Updating content information for post %d ..." % post.post_id)
+            postfuncs.update_post_content(post, content)
+            db.session.commit()
+            print("  New mime: %s" % post.mime_type)
 
+    except KeyboardInterrupt:
+        return
+    except Exception:
+        pass
+
+
+def regenerate_mime(post_id: int) -> None:
+    post = postfuncs.get_post_by_id(post_id)
+    _regenerate_mime(post)
 
 def main() -> None:
     parser_top = ArgumentParser(
@@ -151,6 +158,11 @@ def main() -> None:
         help="regenerate the mime types for posts if they "
         "do not match the actual content"
     )
+    parser.add_argument(
+        "--regenerate-mime",
+        metavar="<post-id>",
+        help="regenerate the mime type for a specific post"
+    )
     command = parser_top.parse_args()
 
     try:
@@ -164,6 +176,8 @@ def main() -> None:
             regenerate_thumbnails()
         elif command.regenerate_mimes:
             regenerate_mimes()
+        elif command.regenerate_mime:
+            regenerate_mime(command.regenerate_mime)
     except errors.BaseError as e:
         print(e, file=stderr)
 
