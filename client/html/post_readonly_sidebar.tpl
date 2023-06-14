@@ -8,6 +8,7 @@
                     'image/gif': 'GIF',
                     'image/jpeg': 'JPEG',
                     'image/png': 'PNG',
+                    'image/apng': 'APNG',
                     'image/webp': 'WEBP',
                     'image/bmp': 'BMP',
                     'image/avif': 'AVIF',

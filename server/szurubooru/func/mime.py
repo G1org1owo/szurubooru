@@ -13,6 +13,9 @@ def get_mime_type(content: bytes) -> str:
         return "image/jpeg"
 
     if content[0:6] == b"\x89PNG\x0D\x0A":
+        if b"acTL" in content and content.index(b"acTL") < content.index(b"IDAT"):
+            return "image/apng"
+
         return "image/png"
 
     if content[0:6] in (b"GIF87a", b"GIF89a"):
@@ -51,6 +54,7 @@ def get_extension(mime_type: str) -> Optional[str]:
         "image/gif": "gif",
         "image/jpeg": "jpg",
         "image/png": "png",
+        "image/apng": "png",
         "image/webp": "webp",
         "image/bmp": "bmp",
         "image/avif": "avif",
@@ -81,6 +85,7 @@ def is_image(mime_type: str) -> bool:
     return mime_type.lower() in (
         "image/jpeg",
         "image/png",
+        "image/apng",
         "image/gif",
         "image/webp",
         "image/bmp",
@@ -90,10 +95,11 @@ def is_image(mime_type: str) -> bool:
     )
 
 
-def is_animated_gif(content: bytes) -> bool:
+def is_animated_image(content: bytes) -> bool:
     pattern = b"\x21\xF9\x04[\x00-\xFF]{4}\x00[\x2C\x21]"
-    return (
-        get_mime_type(content) == "image/gif"
+    mime_type = get_mime_type(content)
+    return mime_type == "image/apng" or (
+        mime_type == "image/gif"
         and len(re.findall(pattern, content)) > 1
     )
 

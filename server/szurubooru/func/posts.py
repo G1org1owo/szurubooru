@@ -496,7 +496,7 @@ def generate_alternate_formats(
     assert post
     assert content
     new_posts = []
-    if mime.is_animated_gif(content):
+    if mime.is_animated_image(content):
         tag_names = [tag.first_name for tag in post.tags]
 
         if config.config["convert"]["gif"]["to_mp4"]:
@@ -615,7 +615,7 @@ def update_post_content(post: model.Post, content: Optional[bytes]) -> None:
         post.type = model.Post.TYPE_FLASH
     elif mime.is_image(post.mime_type):
         update_signature = True
-        if mime.is_animated_gif(content):
+        if mime.is_animated_image(content):
             post.type = model.Post.TYPE_ANIMATION
         else:
             post.type = model.Post.TYPE_IMAGE
