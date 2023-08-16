@@ -105,7 +105,7 @@ def regenerate_mimes() -> None:
         _regenerate_mime(post)
 
 
-def _regenerate_mime(post: Post) -> None:
+def _regenerate_mime(post: model.Post) -> None:
     try:
         content = files.get(postfuncs.get_post_content_path(post))
         if post.mime_type != mime.get_mime_type(content):
