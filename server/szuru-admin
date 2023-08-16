@@ -129,8 +129,13 @@ def force_upload_temporary(token: str, safety: str) -> None:
     content = file_uploads.get(token)
     if not content:
         print("File %s.dat is missing or expired" % token)
-    post, tags = postfuncs.create_post(content, [], user=userfuncs.get_user_by_name("testbot"))
+        return
+    post, tags = postfuncs.create_post(content, [], None)
     postfuncs.update_post_safety(post, safety)
+
+    db.session.add(post)
+    db.session.flush()
+    db.session.commit()
 
 
 def main() -> None:
