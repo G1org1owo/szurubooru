@@ -13,7 +13,7 @@ from getpass import getpass
 from sys import stderr
 
 from szurubooru import config, db, errors, model
-from szurubooru.func import files, images, mime
+from szurubooru.func import files, file_uploads, images, mime
 from szurubooru.func import posts as postfuncs
 from szurubooru.func import users as userfuncs
 
@@ -104,6 +104,7 @@ def regenerate_mimes() -> None:
     for post in db.session.query(model.Post).order_by(model.Post.post_id.desc()).all():
         _regenerate_mime(post)
 
+
 def _regenerate_mime(post: Post) -> None:
     try:
         content = files.get(postfuncs.get_post_content_path(post))
@@ -122,6 +123,13 @@ def _regenerate_mime(post: Post) -> None:
 def regenerate_mime(post_id: int) -> None:
     post = postfuncs.get_post_by_id(post_id)
     _regenerate_mime(post)
+
+
+def force_upload_temporary(token: str, safety: str) -> None:
+    content = file_uploads.get(token)
+    post, tags = postfuncs.create_post(content, [], user=userfuncs.get_user_by_name("testbot"))
+    postfuncs.update_post_safety(post, safety)
+
 
 def main() -> None:
     parser_top = ArgumentParser(
@@ -163,6 +171,17 @@ def main() -> None:
         metavar="<post-id>",
         help="regenerate the mime type for a specific post"
     )
+    parser.add_argument(
+        "--upload-temp",
+        metavar="<token>",
+        help="force upload a temporary file"
+    )
+    parser.add_argument(
+        "--safety",
+        metavar="<safety>",
+        default="unsafe",
+        help="safety to use for post upload, default unsafe"
+    )
     command = parser_top.parse_args()
 
     try:
@@ -178,6 +197,9 @@ def main() -> None:
             regenerate_mimes()
         elif command.regenerate_mime:
             regenerate_mime(command.regenerate_mime)
+        elif command.upload_temp:
+            force_upload_temporary(command.upload_temp, command.safety)
+
     except errors.BaseError as e:
         print(e, file=stderr)
 
