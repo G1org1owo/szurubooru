@@ -33,7 +33,6 @@ def download(url: str, use_video_downloader: bool = False) -> bytes:
     request = urllib.request.Request(url)
     if config.config["user_agent"]:
         request.add_header("User-Agent", config.config["user_agent"])
-    request.add_header("Referer", url)
 
     content_buffer = b""
     length_tally = 0
