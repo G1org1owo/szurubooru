@@ -51,27 +51,23 @@ class TildeWrapper extends BaseMarkdownWrapper {
     }
 }
 
-// prevent ^#... from being treated as headers, due to tag permalinks
-class TagPermalinkFixWrapper extends BaseMarkdownWrapper {
-    preprocess(text) {
-        return text.replace(/^#/g, "%%%#");
-    }
-
-    postprocess(text) {
-        return text.replace(/%%%#/g, "#");
-    }
-}
-
 // post, user and tags permalinks
 class EntityPermalinkWrapper extends BaseMarkdownWrapper {
     preprocess(text) {
         text = text.replace(
-            /(^|^\(|(?:[^\]])\(|[\s<>\[\]\)])([+#@][a-zA-Z0-9_-]+)/g,
-            "$1[$2]($2)"
+            /(?<=(?<!\])\(|[\[<])([+#@?][^\s%#+/]+)(?=[\)\]>])/g, "[$1]($1)"
         );
+
+        text = text.replace(
+            /(?<![\(\[<]|%%%)([+#@?][^\s%#+/]+)(?![\)\]>])/g, "[$1]($1)"
+        );
+
         text = text.replace(/\]\(@(\d+)\)/g, "](/post/$1)");
         text = text.replace(/\]\(\+([a-zA-Z0-9_-]+)\)/g, "](/user/$1)");
-        text = text.replace(/\]\(#([a-zA-Z0-9_-]+)\)/g, "](/posts/query=$1)");
+        text = text.replace(/\]\(#([^\s%+#/]+)\)/g, "](/posts/query=$1)");
+        text = text.replace(/\[\?([^\s%+#/]+)\]\(\?\1\)/g, (_, tag) => {
+            return `[${tag.replace(/_/g, " ")}](/tag/${tag})`;
+        });
         return text;
     }
 }
@@ -158,7 +154,6 @@ function formatMarkdown(text) {
     let wrappers = [
         new SjisWrapper(),
         new TildeWrapper(),
-        new TagPermalinkFixWrapper(),
         new EntityPermalinkWrapper(),
         new SearchPermalinkWrapper(),
         new SpoilersWrapper(),
