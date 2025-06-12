@@ -53,20 +53,26 @@ class TildeWrapper extends BaseMarkdownWrapper {
 
 // post, user and tags permalinks
 class EntityPermalinkWrapper extends BaseMarkdownWrapper {
+    constructor(getPrettyName) {
+        super();
+        this.getPrettyName = getPrettyName || ((text) => text);
+    }
+    unescape(text) {
+        return text.replace(/\\([^#@+/])/g, "$1");
+    }
     preprocess(text) {
         text = text.replace(
-            /(?<=(?<!\])\(|[\[<])([+#@?][^\s%#+/]+)(?=[\)\]>])/g, "[$1]($1)"
-        );
-
-        text = text.replace(
-            /(?<![\(\[<]|%%%)([+#@?][^\s%#+/]+)(?![\)\]>])/g, "[$1]($1)"
+            /(?<![a-zA-Z0-9])([#+@?](?:[a-zA-Z0-9_-]|\\[^#@+/])+)/g,
+            (_, entity) => `[${this.unescape(entity)}](${this.unescape(entity)})`
         );
 
         text = text.replace(/\]\(@(\d+)\)/g, "](/post/$1)");
         text = text.replace(/\]\(\+([a-zA-Z0-9_-]+)\)/g, "](/user/$1)");
-        text = text.replace(/\]\(#([^\s%+#/]+)\)/g, "](/posts/query=$1)");
+        text = text.replace(/\[#([^\s%+#/]+)\]\(#\1\)/g, (_, tag) => {
+            return `[#${this.getPrettyName(tag)}](/posts/query=${tag})`;
+        });
         text = text.replace(/\[\?([^\s%+#/]+)\]\(\?\1\)/g, (_, tag) => {
-            return `[${tag.replace(/_/g, " ")}](/tag/${tag})`;
+            return `[${this.getPrettyName(tag)}](/tag/${tag})`;
         });
         return text;
     }
@@ -110,7 +116,7 @@ class FaviconWrapper extends BaseMarkdownWrapper {
     preprocess(text) {
         return text.replace(
             /\[icon\]((?:[^\[]|\[(?!\/?icon\]))+)\[\/icon\]/gi,
-            "[![$1](https://www.google.com/s2/favicons?domain=$1)]($1) $1"
+            '<a href="$1"><img src="https://www.google.com/s2/favicons?domain=$1"> $1</a>'
         );
     }
 }
@@ -144,7 +150,7 @@ function createRenderer() {
     return renderer;
 }
 
-function formatMarkdown(text) {
+function formatMarkdown(text, getPrettyName) {
     const renderer = createRenderer();
     const options = {
         renderer: renderer,
@@ -154,7 +160,7 @@ function formatMarkdown(text) {
     let wrappers = [
         new SjisWrapper(),
         new TildeWrapper(),
-        new EntityPermalinkWrapper(),
+        new EntityPermalinkWrapper(getPrettyName),
         new SearchPermalinkWrapper(),
         new SpoilersWrapper(),
         new SmallWrapper(),
@@ -172,7 +178,7 @@ function formatMarkdown(text) {
     return DOMPurify.sanitize(text);
 }
 
-function formatInlineMarkdown(text) {
+function formatInlineMarkdown(text, getPrettyName) {
     const renderer = createRenderer();
     const options = {
         renderer: renderer,
@@ -181,7 +187,7 @@ function formatInlineMarkdown(text) {
     };
     let wrappers = [
         new TildeWrapper(),
-        new EntityPermalinkWrapper(),
+        new EntityPermalinkWrapper(getPrettyName),
         new SearchPermalinkWrapper(),
         new SpoilersWrapper(),
         new SmallWrapper(),
