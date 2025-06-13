@@ -76,11 +76,13 @@ class EntityPermalinkWrapper extends BaseMarkdownWrapper {
         );
 
         // resolve markdown links with our custom syntax
-        text = text.replace(/\]\(@(\d+)\)/g, "](post/$1)");
+        text = text.replace(/\]\(@(\d+)\)/g, (match, capture) => {
+            return `](${uri.formatClientLink("post", capture)})`;
+        });
         text = text.replace(new RegExp(`\\]\\(([#+?])(${validTagCharacters}+)\\)`, "g"), (match, prefix, capture) => {
             capture = capture.replace(/\\(.)/g, "$1");
-            if (prefix == "+") return `](${uri.formatClientLink("user", capture)})`;
             if (prefix == "#") return `](${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})})`;
+            if (prefix == "+") return `](${uri.formatClientLink("user", capture)})`;
             if (prefix == "?") return `](${uri.formatClientLink("tag", capture)})`;
         });
         return text;
