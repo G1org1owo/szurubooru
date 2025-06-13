@@ -63,9 +63,6 @@ class EntityPermalinkWrapper extends BaseMarkdownWrapper {
         super();
         this.getPrettyName = getPrettyName || ((text) => text);
     }
-    unescape(text) {
-        return text.replace(/\\(.)/g, "$1");
-    }
     preprocess(text) {
         // turn into markdown links
         text = text.replace(
@@ -81,7 +78,7 @@ class EntityPermalinkWrapper extends BaseMarkdownWrapper {
         // resolve markdown links with our custom syntax
         text = text.replace(/\]\(@(\d+)\)/g, "](post/$1)");
         text = text.replace(new RegExp(`\\]\\(([#+?])(${validTagCharacters}+)\\)`, "g"), (match, prefix, capture) => {
-            capture = this.unescape(capture);
+            capture = capture.replace(/\\(.)/g, "$1");
             if (prefix == "+") return `](${uri.formatClientLink("user", capture)})`;
             if (prefix == "#") return `](${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})})`;
             if (prefix == "?") return `](${uri.formatClientLink("tag", capture)})`;
