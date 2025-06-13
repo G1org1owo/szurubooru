@@ -100,29 +100,30 @@ def regenerate_thumbnails() -> None:
             pass
 
 
-def regenerate_mimes() -> None:
+def refresh_posts_content() -> None:
     for post in db.session.query(model.Post).order_by(model.Post.post_id.desc()).all():
-        _regenerate_mime(post)
+        _refresh_content(post)
 
 
-def _regenerate_mime(post: model.Post) -> None:
+def _refresh_content(post: model.Post) -> None:
     try:
         content = files.get(postfuncs.get_post_content_path(post))
-        if post.mime_type != mime.get_mime_type(content):
-            print("Updating content information for post %d ..." % post.post_id)
-            postfuncs.update_post_content(post, content)
-            db.session.commit()
-            print("  New mime: %s" % post.mime_type)
+        print("Updating content information for post %d ..." % post.post_id)
+        postfuncs.update_post_content(post, content)
+        db.session.commit()
+        print(f"  New mime: {post.mime_type}")
+        print(f"  New size: {post.file_size}")
+        print(f"  New aspect ratio: ({post.canvas_width}:{post.canvas_height})")
 
     except KeyboardInterrupt:
         return
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Uncaught exception: {e}")
 
 
-def regenerate_mime(post_id: int) -> None:
+def refresh_post_content(post_id: int) -> None:
     post = postfuncs.get_post_by_id(post_id)
-    _regenerate_mime(post)
+    _refresh_content(post)
 
 
 def force_upload_temporary(token: str, safety: str) -> None:
@@ -168,15 +169,15 @@ def main() -> None:
         "thumbnail files are missing",
     )
     parser.add_argument(
-        "--regenerate-mimes",
+        "--refresh-all",
         action="store_true",
-        help="regenerate the mime types for posts if they "
-        "do not match the actual content"
+        help="regenerate content metadata for posts if they "
+             "do not match the actual content"
     )
     parser.add_argument(
-        "--regenerate-mime",
+        "--refresh-content",
         metavar="<post-id>",
-        help="regenerate the mime type for a specific post"
+        help="regenerate content metadata for a specific post"
     )
     parser.add_argument(
         "--upload-temp",
@@ -200,10 +201,10 @@ def main() -> None:
             reset_filenames()
         elif command.regenerate_thumbnails:
             regenerate_thumbnails()
-        elif command.regenerate_mimes:
-            regenerate_mimes()
-        elif command.regenerate_mime:
-            regenerate_mime(command.regenerate_mime)
+        elif command.refresh_all:
+            refresh_posts_content()
+        elif command.refresh_content:
+            refresh_post_content(command.refresh_content)
         elif command.upload_temp:
             force_upload_temporary(command.upload_temp, command.safety)
 
