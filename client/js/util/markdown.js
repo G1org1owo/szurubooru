@@ -91,10 +91,16 @@ class EntityPermalinkWrapper extends BaseMarkdownWrapper {
 }
 
 class SearchPermalinkWrapper extends BaseMarkdownWrapper {
-    postprocess(text) {
+    preprocess(text) {
         return text.replace(
             /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi, (match, capture) => {
-            return `<a href="${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})}"><code>${capture}</code></a>`;
+            return `<a href="${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})}"><code>${capture.replace(/([#+?@█])/g, "█$1")}</code></a>`;
+        });
+    }
+    postprocess(text) {
+        return text.replace(
+            /<code>.*?<\/code>/gs, (match) => {
+            return match.replace(/█([#+?@█])/g, "$1");
         });
     }
 }
@@ -172,8 +178,8 @@ function formatMarkdown(text, getPrettyName) {
     let wrappers = [
         new SjisWrapper(),
         new TildeWrapper(),
-        new EntityPermalinkWrapper(getPrettyName),
         new SearchPermalinkWrapper(),
+        new EntityPermalinkWrapper(getPrettyName),
         new SpoilersWrapper(),
         new SmallWrapper(),
         new StrikeThroughWrapper(),
@@ -199,8 +205,8 @@ function formatInlineMarkdown(text, getPrettyName) {
     };
     let wrappers = [
         new TildeWrapper(),
-        new EntityPermalinkWrapper(getPrettyName),
         new SearchPermalinkWrapper(),
+        new EntityPermalinkWrapper(getPrettyName),
         new SpoilersWrapper(),
         new SmallWrapper(),
         new StrikeThroughWrapper(),
