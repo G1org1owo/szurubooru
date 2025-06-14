@@ -215,7 +215,7 @@ function formatMarkdown(text, getPrettyName) {
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
     }
-    const tokens = marked.lexer(text);
+    const tokens = marked.Lexer.lex(text);
     modifyTokens(tokens);
     text = marked.parser(tokens, options);
     wrappers.reverse();
@@ -243,6 +243,8 @@ function formatInlineMarkdown(text, getPrettyName) {
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
     }
+    const tokens = marked.Lexer.lexInline(text);
+    modifyTokens(tokens);
     text = marked.parseInline(text, options);
     wrappers.reverse();
     for (let wrapper of wrappers) {
