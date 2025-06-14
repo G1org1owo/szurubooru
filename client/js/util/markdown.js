@@ -56,24 +56,13 @@ class EntityPermalinkWrapper extends BaseMarkdownWrapper {
         // turn into markdown links
         text = text.replace(
             new RegExp(`(^|${unicodeSpace})([#+?])(${validTagCharacters}+)`, "mg"),
-            (match, lookbehind, prefix, capture) => `${lookbehind}[${prefix}${prefix == "+" ? capture : this.getPrettyName(capture)}](${prefix}${capture})`
+            (match, lookbehind, prefix, capture) => `${lookbehind}[${prefix}${prefix === "+" ? capture : this.getPrettyName(capture)}](${prefix}${capture})`
         );
         // post number links
         text = text.replace(
             /(^|\s)(@\d+\b)/umg,
             "$1[$2]($2)"
         );
-
-        // resolve markdown links with our custom syntax
-        text = text.replace(/\]\(@(\d+)\)/g, (match, capture) => {
-            return `](${uri.formatClientLink("post", capture)})`;
-        });
-        text = text.replace(new RegExp(`\\]\\(([#+?])(${validTagCharacters}+)\\)`, "g"), (match, prefix, capture) => {
-            capture = capture.replace(/\\(.)/g, "$1");
-            if (prefix == "#") return `](${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})})`;
-            if (prefix == "+") return `](${uri.formatClientLink("user", capture)})`;
-            if (prefix == "?") return `](${uri.formatClientLink("tag", capture)})`;
-        });
         return text;
     }
 }
@@ -82,14 +71,11 @@ class SearchPermalinkWrapper extends BaseMarkdownWrapper {
     preprocess(text) {
         return text.replace(
             /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi, (match, capture) => {
-            return `<a href="${uri.formatClientLink("posts", {query: uri.escapeTagName(capture)})}"><code>${capture.replace(/([#+?@█])/g, "█$1")}</code></a>`;
-        });
-    }
-    postprocess(text) {
-        return text.replace(
-            /<code>.*?<\/code>/gs, (match) => {
-            return match.replace(/█([#+?@█])/g, "$1");
-        });
+                const link = {text: capture, href: `#${capture}`}
+                modifyLink(link);
+                return `<a href="${link.href}"><code>${link.text}</code></a>`;
+            }
+        );
     }
 }
 
@@ -118,6 +104,12 @@ class FaviconWrapper extends BaseMarkdownWrapper {
             '<a href="$1"><img src="https://www.google.com/s2/favicons?domain=$1"> $1</a>'
         );
     }
+}
+
+function escapeMarkdown(unsafe) {
+    return unsafe
+        .toString()
+        .replace(/([\\*~_-])/g, "\\$1");
 }
 
 function createRenderer() {
@@ -149,6 +141,43 @@ function createRenderer() {
     return renderer;
 }
 
+function modifyLink(token, skipPrefix = false) {
+    let match;
+    if ((match = /^@(\d+)$/.exec(token.href))) {
+        token.href = uri.formatClientLink("post", match[1]);
+    }
+    else if ((match = /^([#+?])(.+)$/.exec(token.href))) {
+        const prefix = match[1];
+        const capture = match[2].replace(/\\(.)/g, "$1");
+        token.text = escapeMarkdown(token.text.replace(/\\(.)/g, "$1"));
+        if (prefix === "#") {
+            token.href = uri.formatClientLink("posts", { query: uri.escapeTagName(capture) });
+        } else if (prefix === "+") {
+            token.href = uri.formatClientLink("user", capture);
+        } else if (prefix === "?") {
+            token.href = uri.formatClientLink("tag", capture);
+        }
+    }
+}
+
+function modifyTokens(tokens) {
+    let inRawBlock = false;
+    for (const token of tokens) {
+        if (token.type === "paragraph" && token.tokens) {
+            for (const innerToken of token.tokens) {
+                if (innerToken.inRawBlock !== undefined) inRawBlock = innerToken.inRawBlock;
+                if (innerToken.type === "link") {
+                    if (inRawBlock) {
+                        innerToken.type = "text";
+                    } else {
+                        modifyLink(innerToken);
+                    }
+                }
+            }
+        }
+    }
+}
+
 function formatMarkdown(text, getPrettyName) {
     const renderer = createRenderer();
     const options = {
@@ -167,7 +196,9 @@ function formatMarkdown(text, getPrettyName) {
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
     }
-    text = marked.parse(text, options);
+    const tokens = marked.lexer(text);
+    modifyTokens(tokens);
+    text = marked.parser(tokens, options);
     wrappers.reverse();
     for (let wrapper of wrappers) {
         text = wrapper.postprocess(text);
@@ -192,7 +223,9 @@ function formatInlineMarkdown(text, getPrettyName) {
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
     }
-    text = marked.parseInline(text, options);
+    const tokens = marked.lexer(text);
+    modifyTokens(tokens);
+    text = marked.parseInline(tokens, options);
     wrappers.reverse();
     for (let wrapper of wrappers) {
         text = wrapper.postprocess(text);
