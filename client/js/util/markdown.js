@@ -149,7 +149,7 @@ function createRenderer() {
     return renderer;
 }
 
-function modifyLink(token, skipPrefix = false) {
+function modifyLink(token) {
     let match;
     if ((match = /^@(\d+)$/.exec(token.href))) {
         token.href = uri.formatClientLink("post", match[1]);
@@ -178,20 +178,22 @@ function modifyLink(token, skipPrefix = false) {
 
 function modifyTokens(tokens) {
     let inRawBlock = false;
-    for (const token of tokens) {
-        if (token.type === "paragraph" && token.tokens) {
-            for (const innerToken of token.tokens) {
-                if (innerToken.inRawBlock !== undefined) inRawBlock = innerToken.inRawBlock;
-                if (innerToken.type === "link") {
-                    if (inRawBlock) {
-                        innerToken.type = "text";
-                    } else {
-                        modifyLink(innerToken);
-                    }
+    function walk(innerTokens) {
+        for (const token of innerTokens) {
+            if (token.inRawBlock !== undefined) inRawBlock = token.inRawBlock;
+            if (token.type === "link") {
+                if (inRawBlock) {
+                    token.type = "text";
+                } else {
+                    modifyLink(token);
                 }
+            }
+            if (token.tokens && token.tokens.length) {
+                walk(token.tokens);
             }
         }
     }
+    walk(tokens);
 }
 
 function formatMarkdown(text, getPrettyName) {
@@ -241,9 +243,7 @@ function formatInlineMarkdown(text, getPrettyName) {
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
     }
-    const tokens = marked.lexer(text);
-    modifyTokens(tokens);
-    text = marked.parseInline(tokens, options);
+    text = marked.parseInline(text, options);
     wrappers.reverse();
     for (let wrapper of wrappers) {
         text = wrapper.postprocess(text);
