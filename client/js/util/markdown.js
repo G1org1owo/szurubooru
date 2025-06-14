@@ -71,7 +71,7 @@ class SearchPermalinkWrapper extends BaseMarkdownWrapper {
     preprocess(text) {
         return text.replace(
             /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi, (match, capture) => {
-                const link = {text: capture, href: `#${capture}`}
+                const link = {text: capture, href: `#${unescapeHtml(capture)}`}
                 modifyLink(link);
                 return `<a href="${link.href}"><code>${link.text}</code></a>`;
             }
@@ -116,10 +116,20 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&apos;");
 }
 
+function unescapeHtml(unsafe) {
+    return unsafe
+        .toString()
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, "\"")
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, "&");
+}
+
 function escapeMarkdown(unsafe) {
     return unsafe
         .toString()
-        .replace(/([\\*~_-])/g, "\\$1");
+        .replace(/([\/\\!"#$%'()<>*+,.:;=?@[\]^_`{|}~-])/g, "\\$1");
 }
 
 function createRenderer() {
@@ -154,6 +164,14 @@ function modifyLink(token, skipPrefix = false) {
             token.href = uri.formatClientLink("user", capture);
         } else if (prefix === "?") {
             token.href = uri.formatClientLink("tag", capture);
+        }
+        if (token.tokens) {
+            for (const innerToken of token.tokens) {
+                if (innerToken.type !== "escape") {
+                    innerToken.type = "text";
+                    innerToken.text = innerToken.raw.replace(/\\(.)/g, "$1");
+                }
+            }
         }
     }
 }
