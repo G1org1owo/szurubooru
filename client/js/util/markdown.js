@@ -71,7 +71,7 @@ class SearchPermalinkWrapper extends BaseMarkdownWrapper {
     preprocess(text) {
         return text.replace(
             /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi, (match, capture) => {
-                const link = {text: capture, href: `#${uri.escapeParam(unescapeHtml(capture))}`}
+                const link = {text: unescapeHtml(capture), href: `#${uri.escapeParam(unescapeHtml(capture))}`}
                 modifyLink(link);
                 return `<a href="${link.href}"><code>${link.text}</code></a>`;
             }
@@ -129,7 +129,7 @@ function unescapeHtml(unsafe) {
 function escapeMarkdown(unsafe) {
     return unsafe
         .toString()
-        .replace(/([\/\\!"#$%'()<>*+,.:;=?@[\]^_`{|}~-])/g, "\\$1");
+        .replace(/([\/\\!"#$%&'()<>*+,.:;=?@[\]^_`{|}~-])/g, "\\$1");
 }
 
 function createRenderer() {
