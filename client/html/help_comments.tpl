@@ -28,7 +28,7 @@
         </tr>
         <tr>
             <td><code>[icon]https://youtube.com[/icon]</td>
-            <td>adds the site icon next to the link</td>
+            <td>adds the site icon next to a link</td>
         </tr>
     </tbody>
 </table>
