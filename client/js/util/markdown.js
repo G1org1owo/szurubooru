@@ -12,6 +12,10 @@ const validTagCharacters = "(?:\\\\&(?:amp|lt|gt|quot|apos);|[-0-9A-Z_a-z\\xAA\\
 const unicodeSpace = "[\\t-\\r \\xA0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]";
 
 class BaseMarkdownWrapper {
+    init(text) {
+        return text;
+    }
+
     preprocess(text) {
         return text;
     }
@@ -49,18 +53,23 @@ class SjisWrapper extends BaseMarkdownWrapper {
 }
 
 class SearchPermalinkWrapper extends BaseMarkdownWrapper {
-    constructor(getPrettyName) {
-        super();
-        this.getPrettyName = getPrettyName || ((text) => text);
-    }
-    preprocess(text) {
-        return text.replace(
-            /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi, (match, capture) => {
-                const link = {text: unescapeHtml(capture), href: `#${unescapeHtml(capture)}`}
-                modifyLink(link, this.getPrettyName);
-                return `<a href="${link.href}"><code>${escapeMarkdown(link.text)}</code></a>`;
-            }
+    init(text) {
+        text = text.replace(
+            /\[search\]((?:[^\[]|\[(?!\/?search\]))+)\[\/search\]/gi,
+            (match, capture) => `<#${escapeMarkdown(capture.replace(/\\(.)/g, "$1"))}>`
         );
+        return text;
+    }
+}
+
+class EntityPermalinkWrapper extends BaseMarkdownWrapper {
+    init(text) {
+        // enclosed entity shortlinks e.g. <#my tags>
+        text = text.replace(
+            new RegExp(`(^|[^\\(\\\\])<([#+?])(.*?[^\\\\])>`, "mg"),
+            (match, lookbehind, prefix, capture) => `${lookbehind}${prefix}${escapeMarkdown(capture.replace(/\\(.)/g, "$1")).replace(/ /g, "\\ ")}`
+        );
+        return text;
     }
 }
 
@@ -134,9 +143,10 @@ function createRenderer() {
     return renderer;
 }
 
-function resolveEntity(prefix, capture, originalText, getPrettyName) {
+function resolveEntity(prefix, capture, text, getPrettyName) {
     let href;
-    let text = originalText;
+    capture = unescapeHtml(capture);
+    text = unescapeHtml(text);
 
     if (prefix === "@") {
         href = uri.formatClientLink("post", capture);
@@ -144,7 +154,7 @@ function resolveEntity(prefix, capture, originalText, getPrettyName) {
     }
 
     capture = capture.replace(/\\(.)/g, "$1");
-    text = originalText.replace(/\\(.)/g, "$1");
+    text = text.replace(/\\(.)/g, "$1");
 
     if (prefix === "#") {
         href = uri.formatClientLink("posts", { query: uri.escapeTagName(capture) });
@@ -158,8 +168,6 @@ function resolveEntity(prefix, capture, originalText, getPrettyName) {
         text = getPrettyName(text);
     }
 
-    text = unescapeHtml(text);
-
     return { href: href, text: text };
 }
 
@@ -167,13 +175,13 @@ function modifyLink(token, getPrettyName) {
     let match;
     // post number links, tag shortlinks etc.
     if ((match = /^(@)(\d+)\b/.exec(token.href))) {
-        const processed = resolveEntity(match[1], match[2], token.text, getPrettyName);
-        token.href = processed.href;
-        token.text = processed.text;
+        const entity = resolveEntity(match[1], match[2], token.text, getPrettyName);
+        token.href = entity.href;
+        token.text = entity.text;
     } else if ((match = /^([#+?])(.+)$/.exec(token.href))) {
-        const processed = resolveEntity(match[1], match[2], token.text, getPrettyName);
-        token.href = processed.href;
-        token.text = processed.text;
+        const entity = resolveEntity(match[1], match[2], token.text, getPrettyName);
+        token.href = entity.href;
+        token.text = entity.text;
 
         if (token.tokens) {
             for (const innerToken of token.tokens) {
@@ -187,6 +195,7 @@ function modifyLink(token, getPrettyName) {
 }
 
 function flattenTokens(tokens) {
+    const allowedTypes = ["text", "escape", "strong", "em", "del", "emStrong"];
     let i = 0;
     while (i < tokens.length) {
         const currentToken = tokens[i];
@@ -202,8 +211,8 @@ function flattenTokens(tokens) {
             flattenTokens(nextToken.tokens);
         }
 
-        const isCurrentCombinable = currentToken.type === "text" || currentToken.type === "escape";
-        const isNextCombinable = nextToken.type === "text" || nextToken.type === "escape";
+        const isCurrentCombinable = allowedTypes.includes(currentToken.type);
+        const isNextCombinable = allowedTypes.includes(nextToken.type);
 
         if (isCurrentCombinable && isNextCombinable) {
             currentToken.raw += nextToken.raw;
@@ -232,21 +241,21 @@ function modifyTokens(tokens, getPrettyName) {
     let inLink = false;
 
     function buildEntityLink(match, lookbehind, prefix, capture) {
-        const processed = resolveEntity(prefix, capture, `${prefix}${capture}`, getPrettyName);
-        return `${lookbehind}<a href="${escapeHtml(processed.href)}">${escapeHtml(processed.text)}</a>`;
+        const entity = resolveEntity(prefix, capture, `${prefix}${capture}`, getPrettyName);
+        return `${lookbehind}<a href="${escapeHtml(entity.href)}">${escapeHtml(entity.text)}</a>`;
     }
 
     function walk(innerTokens) {
         for (const token of innerTokens) {
             if (token.inLink !== undefined) inLink = token.inLink;
-            if ((token.type === "text") && !inLink) {
+            if ((token.type === "text" || token.type === "blockquote") && !inLink) {
                 token.text = token.raw;
-                // post number links
+                // post number links e.g. @123
                 token.text = token.text.replace(
                     new RegExp(`(^|${unicodeSpace}|${validPrecedingCharacters})(@)(\\d+\\b)`, "mg"),
                     buildEntityLink
                 );
-                // other entity shortlinks
+                // entity shortlinks e.g. #my\ tags
                 token.text = token.text.replace(
                     new RegExp(`(^|${unicodeSpace}|${validPrecedingCharacters})([#+?])(${validTagCharacters}+)`, "mg"),
                     buildEntityLink
@@ -269,7 +278,8 @@ function smartypants(text) {
     function walk(node) {
         for (const child of node.childNodes) {
             if (child.nodeType === Node.TEXT_NODE) {
-                child.textContent = child.textContent
+                const parsed = document.createElement("span");
+                parsed.innerHTML = parseTypeSubset(escapeHtml(child.textContent), ["strong", "em", "del", "emStrong"])
                     // em-dashes
                     .replace(/---/g, "\u2014")
                     // en-dashes
@@ -277,7 +287,7 @@ function smartypants(text) {
                     // opening singles
                     .replace(/(^|[-\u2014/(\[{"\s])'/g, "$1\u2018")
                     // closing singles & apostrophes
-                    .replace(/'/g, '\u2019')
+                    .replace(/'/g, "\u2019")
                     // opening doubles
                     .replace(/(^|[-\u2014/(\[{\u2018\s])"/g, "$1\u201c")
                     // closing doubles
@@ -286,6 +296,7 @@ function smartypants(text) {
                     .replace(/\.{3}/g, "\u2026")
                     // escapes
                     .replace(new RegExp(`\\\\(${validPrecedingCharacters})`, "g"), "$1");
+                node.replaceChild(parsed, child);
             } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== "A") {
                 walk(child);
             }
@@ -306,14 +317,33 @@ function parseLinksOnly(text, getPrettyName) {
             if (token.inRawBlock !== undefined) inRawBlock = token.inRawBlock;
             if (token.type === "link" && !inRawBlock) {
                 modifyLink(token, getPrettyName);
+            } else if (token.type === "blockquote") {
+                token.type = "html";
+                token.text = `\n>${escapeHtml(token.text).replace(/\n\n+/g, "<br><br>").replace(/\n(?!$)/g, "<br>")}`;
             } else if (token.type !== "br") {
+                token.type = "text";
+                token.text = escapeHtml(token.raw);
+            }
+        },
+    };
+
+    return marked.parse(text, options).replace(/^<p>|<\/p>\s*$/g, "")
+}
+
+function parseTypeSubset(text, allowedTypes) {
+    const renderer = createRenderer();
+    const options = {
+        renderer: renderer,
+        breaks: true,
+        walkTokens: (token) => {
+            if (!allowedTypes.includes(token.type)) {
                 token.type = "text";
                 token.text = token.raw;
             }
         },
     };
 
-    return marked.parse(text, options).replace(/^<p>|<\/p>\s*$/g, "")
+    return marked.parseInline(text, options)
 }
 
 function formatMarkdown(text, getPrettyName) {
@@ -324,12 +354,15 @@ function formatMarkdown(text, getPrettyName) {
     };
     let wrappers = [
         new SjisWrapper(),
-        new SearchPermalinkWrapper(getPrettyName),
+        new SearchPermalinkWrapper(),
+        new EntityPermalinkWrapper(),
         new SpoilersWrapper(),
         new SmallWrapper(),
         new FaviconWrapper(),
     ];
-    text = escapeHtml(text);
+    for (let wrapper of wrappers) {
+        text = wrapper.init(text);
+    }
     text = parseLinksOnly(text, getPrettyName);
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
@@ -351,12 +384,15 @@ function formatInlineMarkdown(text, getPrettyName) {
         breaks: true,
     };
     let wrappers = [
-        new SearchPermalinkWrapper(getPrettyName),
+        new SearchPermalinkWrapper(),
+        new EntityPermalinkWrapper(),
         new SpoilersWrapper(),
         new SmallWrapper(),
         new FaviconWrapper(),
     ];
-    text = escapeHtml(text);
+    for (let wrapper of wrappers) {
+        text = wrapper.init(text);
+    }
     text = parseLinksOnly(text, getPrettyName);
     for (let wrapper of wrappers) {
         text = wrapper.preprocess(text);
