@@ -41,19 +41,18 @@ def get(path: str) -> Optional[bytes]:
     with open(full_path, "rb") as handle:
         return handle.read()
 
-def get_first(path: str, n: int) -> Optional[bytes]:
-    full_path = _get_full_path(path)
-    if not os.path.exists(full_path):
-        return None
-    with open(full_path, "rb") as handle:
-        return handle.read(n)
-
-
 def get_handle(path: str) -> Optional[BufferedIOBase]:
     full_path = _get_full_path(path)
     if not os.path.exists(full_path):
         return None
     return open(full_path, "rb")
+
+
+def get_file_size(path: str) -> int:
+    full_path = _get_full_path(path)
+    if not os.path.exists(full_path):
+        return 0
+    return os.path.getsize(full_path)
 
 
 def save(path: str, content: bytes) -> None:
